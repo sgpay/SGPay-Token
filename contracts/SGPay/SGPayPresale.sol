@@ -20,10 +20,10 @@ import '../crowdsale/singlestage/TokenCappedCrowdsale.sol';
  // _rate - 2125
  // _cap - 2000000e18
 
-contract SGPayPreSale is TokenCappedCrowdsale {
+contract SGPayPresale is TokenCappedCrowdsale {
 
 
-  function SGPayPreSale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, uint256 _cap)
+  function SGPayPresale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, uint256 _cap)
     Crowdsale(_startTime, _endTime, _rate, _wallet, controller)
     TokenCappedCrowdsale(_cap)
   {
