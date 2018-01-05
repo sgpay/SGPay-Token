@@ -20,6 +20,11 @@ contract CrowdsaleBase {
 
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
+  modifier onlyController() {
+    require(msg.sender == controller);
+    _;
+  }
+  
   function CrowdsaleBase(uint256 _startTime, address _wallet, address _controller) public {
     require(_wallet != address(0));
 

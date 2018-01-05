@@ -30,4 +30,7 @@ contract SGPayPresale is TokenCappedCrowdsale {
     // require(_cap.div(rate) > _goal);
   }
 
+  function changeRate(uint256 _newValue) public onlyController {
+    rate = _newValue;
+  }
 }

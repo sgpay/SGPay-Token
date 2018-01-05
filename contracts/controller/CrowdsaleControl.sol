@@ -3,6 +3,10 @@ pragma solidity ^0.4.11;
 import './SimpleControl.sol';
 import '../token/Token.sol';
 
+contract CrowdsaleInterface {
+  function changeRate(uint256 _newValue) public;
+}
+
 contract CrowdsaleControl is SimpleControl {
   using SafeMath for uint;
 
@@ -41,4 +45,7 @@ contract CrowdsaleControl is SimpleControl {
     return true;
   }
 
+  function changeRate(uint256 _newValue) onlyAdmins public returns (bool) {
+    CrowdsaleInterface(admins[1]).changeRate(_newValue);
+  }
 }
