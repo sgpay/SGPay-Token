@@ -16,15 +16,19 @@ const FOUNDERS = [web3.eth.accounts[1], web3.eth.accounts[2], web3.eth.accounts[
 
 contract('Controller', (accounts) => {
   let token;
+  let dataCentre;
   let multisigWallet;
   let crowdsale;
   let controller;
 
   beforeEach(async () => {
     token = await Token.new();
-    controller = await Controller.new(token.address, '0x00')
+    dataCentre = await DataCentre.new();
+    controller = await Controller.new(token.address, dataCentre.address);
     await token.transferOwnership(controller.address);
+    await dataCentre.transferOwnership(controller.address);
     await controller.unpause();
+    await controller.mint(accounts[0], 3800000e18);
   });
 
   describe('#changeRate', () => {

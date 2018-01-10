@@ -2,8 +2,8 @@ const Controller = artifacts.require('./controller/Controller.sol');
 const SimpleCrowdsale = artifacts.require('./helpers/MockSimpleCrowdsale.sol');
 const MultisigWallet = artifacts.require('./multisig/solidity/MultiSigWalletWithDailyLimit.sol');
 const Token = artifacts.require('./token/Token.sol');
-const ERC223Receiver = artifacts.require('./helpers/ERC223ReceiverMock.sol');
 const DataCentre = artifacts.require('./token/DataCentre.sol');
+const ERC223Receiver = artifacts.require('./helpers/ERC223ReceiverMock.sol');
 import {advanceBlock} from './helpers/advanceToBlock';
 import latestTime from './helpers/latestTime';
 import increaseTime from './helpers/increaseTime';
@@ -22,9 +22,12 @@ contract('Token', (accounts) => {
     await advanceBlock();
     const startTime = latestTime();
     token = await Token.new();
-    controller = await Controller.new(token.address, '0x00')
+    dataCentre = await DataCentre.new();
+    controller = await Controller.new(token.address, dataCentre.address);
     await token.transferOwnership(controller.address);
+    await dataCentre.transferOwnership(controller.address);
     await controller.unpause();
+    await controller.mint(accounts[0], 3800000e18);
   });
 
   // only needed because of the refactor
@@ -313,7 +316,6 @@ contract('Token', (accounts) => {
     let caps;
     let goal;
     let simpleCrowdsale;
-    let controller;
 
     beforeEach(async () => {
       await advanceBlock();
@@ -323,13 +325,9 @@ contract('Token', (accounts) => {
       caps = 900000e18;
       goal = 180000e18;
 
-      token = await Token.new();
       multisigWallet = await MultisigWallet.new(FOUNDERS, 3, 10*MOCK_ONE_ETH);
-      controller = await Controller.new(token.address, '0x00')
       simpleCrowdsale = await SimpleCrowdsale.new(startTime, ends, rates, multisigWallet.address, controller.address, caps, goal);
       await controller.addAdmin(simpleCrowdsale.address);
-      await token.transferOwnership(controller.address);
-      await controller.unpause();
     });
 
     it('should allow to upgrade controller contract manually', async () => {

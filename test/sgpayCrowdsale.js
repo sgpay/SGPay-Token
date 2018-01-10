@@ -3,6 +3,7 @@ const Presale = artifacts.require('./mocks/MockSGPayPresale.sol');
 const Crowdsale = artifacts.require('./mocks/MockSGPayCrowdsale.sol');
 const MockWallet = artifacts.require('./mocks/MockWallet.sol');
 const Token = artifacts.require('./crowdsale/SGPay.sol');
+const DataCentre = artifacts.require('./token/DataCentre.sol');
 const MultisigWallet = artifacts.require('./multisig/solidity/MultiSigWalletWithDailyLimit.sol');
 import {advanceBlock} from './helpers/advanceToBlock';
 import latestTime from './helpers/latestTime';
@@ -15,6 +16,7 @@ const FOUNDERS = [web3.eth.accounts[1], web3.eth.accounts[2], web3.eth.accounts[
 
 contract('SGpayCrowdsale', (accounts) => {
   let token;
+  let dataCentre;
   let endTime;
   let rate;
   let tokenCap;
@@ -31,11 +33,14 @@ contract('SGpayCrowdsale', (accounts) => {
     tokenCap = 2000000e18;
     token = await Token.new();
     multisigWallet = await MultisigWallet.new(FOUNDERS, 3, 10*MOCK_ONE_ETH);
-    controller = await Controller.new(token.address, '0x00')
+    dataCentre = await DataCentre.new();
+    controller = await Controller.new(token.address, dataCentre.address);
     presale = await Presale.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap);
     await controller.addAdmin(presale.address);
     await token.transferOwnership(controller.address);
+    await dataCentre.transferOwnership(controller.address);
     await controller.unpause();
+    await controller.mint(accounts[0], 3800000e18);
   });
 
   describe('#presale', () => {

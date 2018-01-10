@@ -1,6 +1,7 @@
 const Controller = artifacts.require('./controller/Controller.sol');
 const TokenCappedCrowdsale = artifacts.require('./mocks/MockTokenCappedCrowdsale.sol');
 const Token = artifacts.require('./token/Token.sol');
+const DataCentre = artifacts.require('./token/DataCentre.sol');
 const MultisigWallet = artifacts.require('./multisig/solidity/MultiSigWalletWithDailyLimit.sol');
 import {advanceBlock} from './helpers/advanceToBlock';
 import latestTime from './helpers/latestTime';
@@ -13,6 +14,7 @@ const FOUNDERS = [web3.eth.accounts[1], web3.eth.accounts[2], web3.eth.accounts[
 
 contract('TokenCappedCrowdsale', (accounts) => {
   let token;
+  let dataCentre;
   let endTime;
   let rate;
   let capTimes;
@@ -31,11 +33,14 @@ contract('TokenCappedCrowdsale', (accounts) => {
 
     token = await Token.new();
     multisigWallet = await MultisigWallet.new(FOUNDERS, 3, 10*MOCK_ONE_ETH);
-    controller = await Controller.new(token.address, '0x00')
+    dataCentre = await DataCentre.new();
+    controller = await Controller.new(token.address, dataCentre.address);
     tokenCappedCrowdsale = await TokenCappedCrowdsale.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap);
     await controller.addAdmin(tokenCappedCrowdsale.address);
     await token.transferOwnership(controller.address);
+    await dataCentre.transferOwnership(controller.address);
     await controller.unpause();
+    await controller.mint(accounts[0], 3800000e18);
   });
 
   it('should allow not investors to buy tokens after endTime', async () => {
@@ -63,7 +68,7 @@ contract('TokenCappedCrowdsale', (accounts) => {
 
     //checking initial token distribution details
     const initialBalance = await token.balanceOf.call(accounts[0]);
-    assert.equal(28350000e18, initialBalance.toNumber(), 'initialBalance for sale NOT distributed properly');
+    assert.equal(3800000e18, initialBalance.toNumber(), 'initialBalance for sale NOT distributed properly');
 
     //checking token and wallet address
     const tokenAddress = await controller.satellite.call();
