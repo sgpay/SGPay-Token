@@ -3,6 +3,10 @@ pragma solidity ^0.4.11;
 import '../SafeMath.sol';
 import '../ownership/Ownable.sol';
 
+contract IMainIco {
+  address public complimentaryICO;
+}
+
 /**
  * @title RefundVault
  * @dev This contract is used for storing funds while a crowdsale
@@ -22,13 +26,18 @@ contract RefundVault is Ownable {
   event RefundsEnabled();
   event Refunded(address indexed beneficiary, uint256 weiAmount);
 
+  modifier onlyICOs() {
+    require(msg.sender == owner || msg.sender == IMainIco(owner).complimentaryICO());
+    _;
+  }
+
   function RefundVault(address _wallet) public {
     require(_wallet != address(0));
     wallet = _wallet;
     state = State.Active;
   }
 
-  function deposit(address investor) onlyOwner public payable {
+  function deposit(address investor) onlyICOs public payable {
     require(state == State.Active);
     deposited[investor] = deposited[investor].add(msg.value);
   }

@@ -1,8 +1,9 @@
 const Controller = artifacts.require('./controller/Controller.sol');
 const Presale = artifacts.require('./mocks/MockSGPayPresale.sol');
 const CrowdsaleMain = artifacts.require('./mocks/MockSGPayCrowdsaleMain.sol');
+const CrowdsaleK = artifacts.require('./mocks/MockSGPayCrowdsaleK.sol');
 const MockWallet = artifacts.require('./mocks/MockWallet.sol');
-const Token = artifacts.require('./crowdsale/SGPay.sol');
+const Token = artifacts.require('./crowdsaleMain/SGPay.sol');
 const DataCentre = artifacts.require('./token/DataCentre.sol');
 const MultisigWallet = artifacts.require('./multisig/solidity/MultiSigWalletWithDailyLimit.sol');
 import {advanceBlock} from './helpers/advanceToBlock';
@@ -181,9 +182,11 @@ contract('SGpayCrowdsale', (accounts) => {
 
   describe('#crowdsale', () => {
     let goal;
-    let crowdsale;
+    let crowdsaleMain;
+    let crowdsaleK;
     let endTime;
     let startTime;
+    let vaultAddr;
 
     beforeEach(async () => {
       await advanceBlock();
@@ -192,14 +195,19 @@ contract('SGpayCrowdsale', (accounts) => {
       rate = 1700;
       goal = 1500e18;
       tokenCap = 10000000e18;
-      crowdsale = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
+      crowdsaleMain = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
+      vaultAddr = await crowdsaleMain.vault.call();
+      crowdsaleK = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, vaultAddr);
+      await crowdsaleMain.setKico(crowdsaleK.address);
+      await crowdsaleK.setMain(crowdsaleMain.address);
       await controller.removeAdmin(presale.address);
-      await controller.addAdmin(crowdsale.address);
+      await controller.addAdmin(crowdsaleMain.address);
+      await controller.addAdmin(crowdsaleK.address);
     });
 
-    it('should allow start crowdsale properly', async () => {
+    it('should allow start crowdsaleMain properly', async () => {
     // checking startTime
-    const startTimeSet = await crowdsale.startTime.call();
+    const startTimeSet = await crowdsaleMain.startTime.call();
     assert.equal(startTime, startTimeSet.toNumber(), 'startTime not set right');
 
     //checking initial token distribution details
@@ -208,15 +216,15 @@ contract('SGpayCrowdsale', (accounts) => {
 
     //checking token and wallet address
     const tokenAddress = await controller.satellite.call();
-    const walletAddress = await crowdsale.wallet.call();
+    const walletAddress = await crowdsaleMain.wallet.call();
     assert.equal(tokenAddress, token.address, 'address for token in contract not set');
     assert.equal(walletAddress, multisigWallet.address, 'address for multisig wallet in contract not set');
 
     //list rate and check
-    const rate = await crowdsale.rate.call();
-    const endTime = await crowdsale.endTime.call();
-    const tokenCapSet = await crowdsale.tokenCap.call();
-    const goal = await crowdsale.goal.call();
+    const rate = await crowdsaleMain.rate.call();
+    const endTime = await crowdsaleMain.endTime.call();
+    const tokenCapSet = await crowdsaleMain.tokenCap.call();
+    const goal = await crowdsaleMain.goal.call();
 
     assert.equal(goal.toNumber(), goal, 'tokenCap not set');
     assert.equal(tokenCapSet.toNumber(), tokenCap, 'tokenCap not set');
@@ -224,145 +232,282 @@ contract('SGpayCrowdsale', (accounts) => {
     assert.equal(rate.toNumber(), rate, 'rate not set right');
     });
 
-    it('should not allow to start crowdsale if endTime smaller than startTime',  async () => {
-      let crowdsaleNew;
+    it('should allow start crowdsaleK properly', async () => {
+    // checking startTime
+    const startTimeSet = await crowdsaleK.startTime.call();
+    assert.equal(startTime, startTimeSet.toNumber(), 'startTime not set right');
+
+    //checking initial token distribution details
+    const initialBalance = await token.balanceOf.call(accounts[0]);
+    assert.equal(3800000e18, initialBalance.toNumber(), 'initialBalance for sale NOT distributed properly');
+
+    //checking token and wallet address
+    const tokenAddress = await controller.satellite.call();
+    const walletAddress = await crowdsaleK.wallet.call();
+    assert.equal(tokenAddress, token.address, 'address for token in contract not set');
+    assert.equal(walletAddress, multisigWallet.address, 'address for multisig wallet in contract not set');
+
+    //list rate and check
+    const rate = await crowdsaleK.rate.call();
+    const endTime = await crowdsaleK.endTime.call();
+    const tokenCapSet = await crowdsaleK.tokenCap.call();
+
+    assert.equal(tokenCapSet.toNumber(), tokenCap, 'tokenCap not set');
+    assert.equal(endTime.toNumber(), endTime, 'endTime not set right');
+    assert.equal(rate.toNumber(), rate, 'rate not set right');
+    assert.equal(await crowdsaleMain.vault.call(), await crowdsaleK.vault.call());
+    });
+
+    it('should not allow to start crowdsaleMain if endTime smaller than startTime',  async () => {
+      let crowdsaleMainNew;
       endTime = startTime - 1;
       try {
-        crowdsaleNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
+        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
       }
 
-      assert.equal(crowdsaleNew, undefined, 'crowdsale still initialized');
+      assert.equal(crowdsaleMainNew, undefined, 'crowdsaleMain still initialized');
     });
 
-    it('should not allow to start crowdsale due to ZERO rate',  async () => {
-      let crowdsaleNew;
+    it('should not allow to start crowdsaleMain due to ZERO rate',  async () => {
+      let crowdsaleMainNew;
       try {
-        crowdsaleNew = await CrowdsaleMain.new(startTime, endTime, 0, multisigWallet.address, controller.address, tokenCap, goal);
+        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, 0, multisigWallet.address, controller.address, tokenCap, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
       }
 
-      assert.equal(crowdsaleNew, undefined, 'crowdsale still initialized');
+      assert.equal(crowdsaleMainNew, undefined, 'crowdsaleMain still initialized');
     });
 
-    it('should not allow to start crowdsale if cap is zero',  async () => {
-      let crowdsaleNew;
+    it('should not allow to start crowdsaleMain if cap is zero',  async () => {
+      let crowdsaleMainNew;
       try {
-        crowdsaleNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, 0, goal);
+        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, 0, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
       }
 
-      assert.equal(crowdsaleNew, undefined, 'crowdsale still initialized');
+      assert.equal(crowdsaleMainNew, undefined, 'crowdsaleMain still initialized');
     });
 
-    it('should not allow to start crowdsale if goal is zero',  async () => {
-      let crowdsaleNew;
+    it('should not allow to start crowdsaleMain if goal is zero',  async () => {
+      let crowdsaleMainNew;
       try {
-        crowdsaleNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, 0);
+        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, 0);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
       }
 
-      assert.equal(crowdsaleNew, undefined, 'crowdsale still initialized');
+      assert.equal(crowdsaleMainNew, undefined, 'crowdsaleMain still initialized');
     });
 
-    it('should allow investors to buy tokens at the constant swapRate', async () => {
+    it('should not allow to start crowdsaleK if endTime smaller than startTime',  async () => {
+      let crowdsaleKNew;
+      endTime = startTime - 1;
+      try {
+        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, vaultAddr);
+        assert.fail('should have failed before');
+      } catch(error) {
+        assertJump(error);
+      }
+
+      assert.equal(crowdsaleKNew, undefined, 'crowdsaleK still initialized');
+    });
+
+    it('should not allow to start crowdsaleK due to ZERO rate',  async () => {
+      let crowdsaleKNew;
+      try {
+        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, 0, multisigWallet.address, controller.address, tokenCap, vaultAddr);
+        assert.fail('should have failed before');
+      } catch(error) {
+        assertJump(error);
+      }
+
+      assert.equal(crowdsaleKNew, undefined, 'crowdsaleK still initialized');
+    });
+
+    it('should not allow to start crowdsaleK if cap is zero',  async () => {
+      let crowdsaleKNew;
+      try {
+        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, 0, vaultAddr);
+        assert.fail('should have failed before');
+      } catch(error) {
+        assertJump(error);
+      }
+
+      assert.equal(crowdsaleKNew, undefined, 'crowdsaleK still initialized');
+    });
+
+    it('should not allow to start crowdsaleK if vaultAddr is zero',  async () => {
+      let crowdsaleKNew;
+      try {
+        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, 0x00);
+        assert.fail('should have failed before');
+      } catch(error) {
+        assertJump(error);
+      }
+
+      assert.equal(crowdsaleKNew, undefined, 'crowdsaleK still initialized');
+    });
+
+    it('should allow investors to buy tokens at the constant swapRate from either contract', async () => {
       const INVESTOR = accounts[4];
 
       // buy tokens
-      await crowdsale.buyTokens(INVESTOR, {value: MOCK_ONE_ETH, from: INVESTOR});
-      const vaultAddr = await crowdsale.vault.call();
+      await crowdsaleMain.buyTokens(INVESTOR, {value: 2*MOCK_ONE_ETH, from: INVESTOR});
+      await crowdsaleK.buyTokens(INVESTOR, {value: MOCK_ONE_ETH, from: INVESTOR});
+      const vaultAddr = await crowdsaleMain.vault.call();
       const vaultBalance = await web3.eth.getBalance(vaultAddr);
       const tokensBalance = await token.balanceOf.call(INVESTOR);
 
-      const tokensAmount = new BigNumber(MOCK_ONE_ETH).mul(rate);
-      assert.equal(vaultBalance.toNumber(), MOCK_ONE_ETH, 'ether not deposited into the wallet');
+      const tokensAmountMain = new BigNumber(2*MOCK_ONE_ETH).mul(rate);
+      const tokensAmountK = new BigNumber(MOCK_ONE_ETH).mul(rate);
+
+      const tokensAmount = tokensAmountMain.add(tokensAmountK);
+      assert.equal(vaultBalance.toNumber(), 3*MOCK_ONE_ETH, 'ether not deposited into the wallet');
       assert.equal(tokensBalance.toNumber(), tokensAmount.toNumber(), 'tokens not deposited into the INVESTOR balance');
+
+      // check readings from both contract
+      assert.equal((await crowdsaleMain.weiRaisedIndividual()).toNumber(), 2*MOCK_ONE_ETH);
+      assert.equal((await crowdsaleK.weiRaisedIndividual()).toNumber(), MOCK_ONE_ETH);
+
+      assert.equal((await crowdsaleMain.weiRaised()).toNumber(), 3*MOCK_ONE_ETH);
+      assert.equal((await crowdsaleK.weiRaised()).toNumber(), 3*MOCK_ONE_ETH);
+
+      assert.equal((await crowdsaleMain.totalSupplyIndividual()).toNumber(), tokensAmountMain.toNumber());
+      assert.equal((await crowdsaleK.totalSupplyIndividual()).toNumber(), tokensAmountK.toNumber());
+
+      assert.equal((await crowdsaleMain.totalSupply()).toNumber(), tokensAmount.toNumber());
+      assert.equal((await crowdsaleK.totalSupply()).toNumber(), tokensAmount.toNumber());
     });
 
 
-    it('should allow investors to buy tokens just below tokenCap in the 1st phase', async () => {
-      await crowdsale.diluteCaps();
+    it('should allow investors to buy tokens just below tokenCap combined from both contracts in the 1st phase', async () => {
+      await crowdsaleMain.diluteCaps();
       const INVESTORS = accounts[4];
       const amountEth = new BigNumber(((tokenCap/1e18)/rate) - 1).mul(MOCK_ONE_ETH);
       const tokensAmount = new BigNumber(rate).mul(amountEth);
 
       //  buy tokens
-      await crowdsale.buyTokens(INVESTORS, {value: amountEth, from: INVESTORS});
-      const vaultAddr = await crowdsale.vault.call();
+      await crowdsaleMain.buyTokens(INVESTORS, {value: amountEth.div(2), from: INVESTORS});
+      await crowdsaleK.buyTokens(INVESTORS, {value: amountEth.div(2), from: INVESTORS});
+      const vaultAddr = await crowdsaleMain.vault.call();
       const vaultBalance = await web3.eth.getBalance(vaultAddr);
       const balanceInvestor = await token.balanceOf.call(INVESTORS);
-      const totalSupply = await crowdsale.totalSupply.call();
+      const totalSupply = await crowdsaleMain.totalSupply.call();
 
       assert.equal(vaultBalance.toNumber(), amountEth.toNumber(), 'ether still deposited into the wallet');
       assert.equal(balanceInvestor.toNumber(), tokensAmount.toNumber(), 'balance still added for investor');
       assert.equal(totalSupply.toNumber(), tokensAmount.toNumber(), 'balance not added to totalSupply');
+
+      // check readings from both contract
+      assert.equal((await crowdsaleMain.weiRaisedIndividual()).toNumber(), (amountEth.div(2)).toNumber());
+      assert.equal((await crowdsaleK.weiRaisedIndividual()).toNumber(), (amountEth.div(2)).toNumber());
+
+      assert.equal((await crowdsaleMain.weiRaised()).toNumber(), amountEth.toNumber());
+      assert.equal((await crowdsaleK.weiRaised()).toNumber(), amountEth.toNumber());
+
+      assert.equal((await crowdsaleMain.totalSupplyIndividual()).toNumber(), tokensAmount.div(2).toNumber());
+      assert.equal((await crowdsaleK.totalSupplyIndividual()).toNumber(), tokensAmount.div(2).toNumber());
+
+      assert.equal((await crowdsaleMain.totalSupply()).toNumber(), tokensAmount.toNumber());
+      assert.equal((await crowdsaleK.totalSupply()).toNumber(), tokensAmount.toNumber());
     });
 
-    it('should allow investors to buy tokens just equal to tokenCap in the 1st phase', async () => {
-      await crowdsale.diluteCaps();
+    it('should allow investors to buy tokens just equal to tokenCap combined from both contracts in the 1st phase', async () => {
+      await crowdsaleMain.diluteCaps();
       const INVESTORS = accounts[4];
       const amountEth = new BigNumber(((tokenCap/1e18)/rate)).mul(MOCK_ONE_ETH);
       const tokensAmount = new BigNumber(rate).mul(amountEth);
 
       //  buy tokens
-      await crowdsale.buyTokens(INVESTORS, {value: amountEth, from: INVESTORS});
-      const vaultAddr = await crowdsale.vault.call();
+      await crowdsaleMain.buyTokens(INVESTORS, {value: amountEth.div(2), from: INVESTORS});
+      await crowdsaleK.buyTokens(INVESTORS, {value: amountEth.div(2), from: INVESTORS});
+      const vaultAddr = await crowdsaleMain.vault.call();
       const vaultBalance = await web3.eth.getBalance(vaultAddr);
       const balanceInvestor = await token.balanceOf.call(INVESTORS);
-      const totalSupply = await crowdsale.totalSupply.call();
+      const totalSupply = await crowdsaleMain.totalSupply.call();
 
       assert.equal(vaultBalance.toNumber(), amountEth.toNumber(), 'ether still deposited into the wallet');
       assert.equal(balanceInvestor.toNumber(), tokensAmount.toNumber(), 'balance still added for investor');
       assert.equal(totalSupply.toNumber(), tokensAmount.toNumber(), 'balance not added to totalSupply');
+
+      // check readings from both contract
+      assert.equal((await crowdsaleMain.weiRaisedIndividual()).toNumber(), (amountEth.div(2)).toNumber());
+      assert.equal((await crowdsaleK.weiRaisedIndividual()).toNumber(), (amountEth.div(2)).toNumber());
+
+      assert.equal((await crowdsaleMain.weiRaised()).toNumber(), amountEth.toNumber());
+      assert.equal((await crowdsaleK.weiRaised()).toNumber(), amountEth.toNumber());
+
+      assert.equal((await crowdsaleMain.totalSupplyIndividual()).toNumber(), tokensAmount.div(2).toNumber());
+      assert.equal((await crowdsaleK.totalSupplyIndividual()).toNumber(), tokensAmount.div(2).toNumber());
+
+      assert.equal((await crowdsaleMain.totalSupply()).toNumber(), tokensAmount.toNumber());
+      assert.equal((await crowdsaleK.totalSupply()).toNumber(), tokensAmount.toNumber());
     });
 
 
-    it('should not allow investors to buy tokens above tokenCap in the 1st phase', async () => {
-      await crowdsale.diluteCaps();
+    it('should not allow investors to buy tokens above tokenCap combined from both contracts in the 1st phase', async () => {
+      await crowdsaleMain.diluteCaps();
+      await crowdsaleK.diluteCaps();
       const INVESTORS = accounts[4];
       const amountEth = new BigNumber(((tokenCap/1e18)/rate) + 1).mul(MOCK_ONE_ETH);
       const tokensAmount = new BigNumber(rate).mul(amountEth);
 
+      await crowdsaleMain.buyTokens(INVESTORS, {value: amountEth.div(2), from: INVESTORS});
+
       //  buy tokens
       try {
-        await crowdsale.buyTokens(INVESTORS, {value: amountEth, from: INVESTORS});
+        await crowdsaleK.buyTokens(INVESTORS, {value: amountEth.div(2), from: INVESTORS});
         assert.fail('should have failed before');
       } catch (error) {
         assertJump(error);
       }
 
-      const vaultAddr = await crowdsale.vault.call();
+      const vaultAddr = await crowdsaleMain.vault.call();
       const vaultBalance = await web3.eth.getBalance(vaultAddr);
       const balanceInvestor = await token.balanceOf.call(INVESTORS);
-      const totalSupply = await crowdsale.totalSupply.call();
-      assert.equal(vaultBalance.toNumber(), 0, 'ether still deposited into the wallet');
-      assert.equal(balanceInvestor.toNumber(), 0, 'balance still added for investor');
-      assert.equal(totalSupply.toNumber(), 0, 'balance still added to totalSupply');
+      const totalSupply = await crowdsaleMain.totalSupply.call();
+      assert.equal(vaultBalance.toNumber(), amountEth.div(2).toNumber(), 'ether still deposited into the wallet');
+      assert.equal(balanceInvestor.toNumber(), tokensAmount.div(2).toNumber(), 'balance still added for investor');
+      assert.equal(totalSupply.toNumber(), tokensAmount.div(2).toNumber(), 'balance still added to totalSupply');
+
+      // check readings from both contract
+      assert.equal((await crowdsaleMain.weiRaisedIndividual()).toNumber(), (amountEth.div(2)).toNumber());
+      assert.equal((await crowdsaleK.weiRaisedIndividual()).toNumber(), 0);
+
+      assert.equal((await crowdsaleMain.weiRaised()).toNumber(), (amountEth.div(2)).toNumber());
+      assert.equal((await crowdsaleK.weiRaised()).toNumber(), (amountEth.div(2)).toNumber());
+
+      assert.equal((await crowdsaleMain.totalSupplyIndividual()).toNumber(), tokensAmount.div(2).toNumber());
+      assert.equal((await crowdsaleK.totalSupplyIndividual()).toNumber(), 0);
+
+      assert.equal((await crowdsaleMain.totalSupply()).toNumber(), tokensAmount.div(2).toNumber());
+      assert.equal((await crowdsaleK.totalSupply()).toNumber(), tokensAmount.div(2).toNumber());
     });
 
 
     it('should deny refunds before end', async function () {
-      await crowdsale.diluteCaps();
+      await crowdsaleMain.diluteCaps();
+      await crowdsaleK.diluteCaps();
       const INVESTOR = accounts[4];
 
       // buy tokens
-      await crowdsale.buyTokens(INVESTOR, {value: MOCK_ONE_ETH, from: INVESTOR});
-      const vaultAddr = await crowdsale.vault.call();
+      await crowdsaleMain.buyTokens(INVESTOR, {value: MOCK_ONE_ETH, from: INVESTOR});
+      const vaultAddr = await crowdsaleMain.vault.call();
       const tokensBalance = await token.balanceOf.call(INVESTOR);
       const tokensAmount = new BigNumber(MOCK_ONE_ETH).mul(rate);
       const vaultBalanceBefore = await web3.eth.getBalance(vaultAddr);
 
       //  claim refund
       try {
-        await crowdsale.claimRefund({from: INVESTOR});
+        await crowdsaleMain.claimRefund({from: INVESTOR});
         assert.fail('should have failed before');
       } catch (error) {
         assertJump(error);
@@ -370,27 +515,27 @@ contract('SGpayCrowdsale', (accounts) => {
 
       const vaultBalanceAfter = await web3.eth.getBalance(vaultAddr);
       const balanceInvestor = await token.balanceOf.call(INVESTOR);
-      const totalSupply = await crowdsale.totalSupply.call();
+      const totalSupply = await crowdsaleMain.totalSupply.call();
       assert.equal(vaultBalanceBefore.sub(vaultBalanceAfter).toNumber(), 0, 'ether still deposited into the wallet');
     })
 
     it('should deny refunds after end if goal reached', async function () {
-      await crowdsale.diluteCaps();
+      await crowdsaleMain.diluteCaps();
       const INVESTOR = accounts[4];
       const amountEth = new BigNumber(goal/1e18).mul(MOCK_ONE_ETH);
 
       // buy tokens
-      await crowdsale.buyTokens(INVESTOR, {value: amountEth, from: INVESTOR});
-      const vaultAddr = await crowdsale.vault.call();
+      await crowdsaleMain.buyTokens(INVESTOR, {value: amountEth, from: INVESTOR});
+      const vaultAddr = await crowdsaleMain.vault.call();
       const tokensBalance = await token.balanceOf.call(INVESTOR);
       const tokensAmount = new BigNumber(amountEth).mul(rate);
       const vaultBalanceBefore = await web3.eth.getBalance(vaultAddr);
       await increaseTime(endTime - startTime + 1);
-      await crowdsale.finalize();
+      await crowdsaleMain.finalize();
 
       //  claim refund
       try {
-        await crowdsale.claimRefund({from: INVESTOR});
+        await crowdsaleMain.claimRefund({from: INVESTOR});
         assert.fail('should have failed before');
       } catch (error) {
         assertJump(error);
@@ -398,57 +543,136 @@ contract('SGpayCrowdsale', (accounts) => {
 
       const vaultBalanceAfter = await web3.eth.getBalance(vaultAddr);
       const balanceInvestor = await token.balanceOf.call(INVESTOR);
-      const totalSupply = await crowdsale.totalSupply.call();
+      const totalSupply = await crowdsaleMain.totalSupply.call();
+      assert.equal(vaultBalanceBefore.sub(vaultBalanceAfter).toNumber(), amountEth, 'ether still deposited into the wallet');
+    })
+
+    it('should deny refunds after end if goal reached using crowdsaleK', async function () {
+      await crowdsaleK.diluteCaps();
+      const INVESTOR = accounts[4];
+      const amountEth = new BigNumber(goal/1e18).mul(MOCK_ONE_ETH);
+
+      // buy tokens
+      await crowdsaleK.buyTokens(INVESTOR, {value: amountEth, from: INVESTOR});
+      const vaultAddr = await crowdsaleK.vault.call();
+      const tokensBalance = await token.balanceOf.call(INVESTOR);
+      const tokensAmount = new BigNumber(amountEth).mul(rate);
+      const vaultBalanceBefore = await web3.eth.getBalance(vaultAddr);
+      await increaseTime(endTime - startTime + 1);
+      await crowdsaleMain.finalize();
+
+      //  claim refund
+      try {
+        await crowdsaleMain.claimRefund({from: INVESTOR});
+        assert.fail('should have failed before');
+      } catch (error) {
+        assertJump(error);
+      }
+
+      const vaultBalanceAfter = await web3.eth.getBalance(vaultAddr);
+      const balanceInvestor = await token.balanceOf.call(INVESTOR);
+      const totalSupply = await crowdsaleMain.totalSupply.call();
       assert.equal(vaultBalanceBefore.sub(vaultBalanceAfter).toNumber(), amountEth, 'ether still deposited into the wallet');
     })
 
     it('should allow refunds after end if goal was not reached', async function () {
-      await crowdsale.diluteCaps();
+      await crowdsaleMain.diluteCaps();
       const INVESTOR = accounts[4];
       const amountEth = new BigNumber((goal/1e18) - 1).mul(MOCK_ONE_ETH);
       const investorEthBalanceBefore = await web3.eth.getBalance(INVESTOR);
 
       // buy tokens
-      await crowdsale.buyTokens(INVESTOR, {value: amountEth, from: INVESTOR, gasPrice: 0});
-      const vaultAddr = await crowdsale.vault.call();
+      await crowdsaleMain.buyTokens(INVESTOR, {value: amountEth, from: INVESTOR, gasPrice: 0});
+      const vaultAddr = await crowdsaleMain.vault.call();
       const tokensBalance = await token.balanceOf.call(INVESTOR);
       const tokensAmount = new BigNumber(amountEth).mul(rate);
       const vaultBalanceBefore = await web3.eth.getBalance(vaultAddr);
       await increaseTime(endTime - startTime + 1);
-      await crowdsale.finalize();
+      await crowdsaleMain.finalize();
 
       //  claim refund
-      await crowdsale.claimRefund({from: INVESTOR, gasPrice: 0});
+      await crowdsaleMain.claimRefund({from: INVESTOR, gasPrice: 0});
       const investorEthBalanceAfter = await web3.eth.getBalance(INVESTOR);
 
 
       const vaultBalanceAfter = await web3.eth.getBalance(vaultAddr);
       const balanceInvestor = await token.balanceOf.call(INVESTOR);
-      const totalSupply = await crowdsale.totalSupply.call();
+      const totalSupply = await crowdsaleMain.totalSupply.call();
+      assert.equal(investorEthBalanceAfter.sub(investorEthBalanceBefore).toNumber(), 0, 'ether still deposited into the wallet');
+      assert.equal(vaultBalanceBefore.sub(vaultBalanceAfter).toNumber(), amountEth.toNumber(), 'ether still deposited into the wallet');
+    })
+
+    it('should allow refunds after end if goal was not reached when buying through crowdsaleK', async function () {
+      await crowdsaleK.diluteCaps();
+      const INVESTOR = accounts[4];
+      const amountEth = new BigNumber((goal/1e18) - 1).mul(MOCK_ONE_ETH);
+      const investorEthBalanceBefore = await web3.eth.getBalance(INVESTOR);
+
+      // buy tokens
+      await crowdsaleK.buyTokens(INVESTOR, {value: amountEth, from: INVESTOR, gasPrice: 0});
+      const vaultAddr = await crowdsaleK.vault.call();
+      const tokensBalance = await token.balanceOf.call(INVESTOR);
+      const tokensAmount = new BigNumber(amountEth).mul(rate);
+      const vaultBalanceBefore = await web3.eth.getBalance(vaultAddr);
+      await increaseTime(endTime - startTime + 1);
+      await crowdsaleMain.finalize();
+
+      //  claim refund
+      await crowdsaleMain.claimRefund({from: INVESTOR, gasPrice: 0});
+      const investorEthBalanceAfter = await web3.eth.getBalance(INVESTOR);
+
+
+      const vaultBalanceAfter = await web3.eth.getBalance(vaultAddr);
+      const balanceInvestor = await token.balanceOf.call(INVESTOR);
+      const totalSupply = await crowdsaleMain.totalSupply.call();
       assert.equal(investorEthBalanceAfter.sub(investorEthBalanceBefore).toNumber(), 0, 'ether still deposited into the wallet');
       assert.equal(vaultBalanceBefore.sub(vaultBalanceAfter).toNumber(), amountEth.toNumber(), 'ether still deposited into the wallet');
     })
 
     it('should forward funds to wallet after end if goal was reached', async function () {
-      await crowdsale.diluteCaps();
+      await crowdsaleMain.diluteCaps();
       const INVESTOR = accounts[4];
       const amountEth = new BigNumber(goal/1e18).mul(MOCK_ONE_ETH);
       const walletBalanceBefore = await web3.eth.getBalance(multisigWallet.address);
 
       // buy tokens
-      await crowdsale.buyTokens(INVESTOR, {value: amountEth, from: INVESTOR});
-      const vaultAddr = await crowdsale.vault.call();
+      await crowdsaleMain.buyTokens(INVESTOR, {value: amountEth, from: INVESTOR});
+      const vaultAddr = await crowdsaleMain.vault.call();
       const tokensBalance = await token.balanceOf.call(INVESTOR);
       const tokensAmount = new BigNumber(amountEth).mul(rate);
       const vaultBalanceBefore = await web3.eth.getBalance(vaultAddr);
       await increaseTime(endTime - startTime + 1);
-      await crowdsale.finalize();
+      await crowdsaleMain.finalize();
 
       //  claim refund
       const walletBalanceAfter = await web3.eth.getBalance(multisigWallet.address);
       const vaultBalanceAfter = await web3.eth.getBalance(vaultAddr);
       const balanceInvestor = await token.balanceOf.call(INVESTOR);
-      const totalSupply = await crowdsale.totalSupply.call();
+      const totalSupply = await crowdsaleMain.totalSupply.call();
+      assert.equal(vaultBalanceBefore.sub(vaultBalanceAfter).toNumber(), amountEth.toNumber(), 'ether still deposited into the wallet');
+      assert.equal(walletBalanceAfter.sub(walletBalanceBefore).toNumber(), amountEth.toNumber(), 'balance still added for investor');
+    });
+
+    it('should forward funds to wallet after end if goal was reached using crowdsaleK', async function () {
+      await crowdsaleK.diluteCaps();
+      const INVESTOR = accounts[4];
+      const amountEth = new BigNumber(goal/1e18).mul(MOCK_ONE_ETH);
+      const walletBalanceBefore = await web3.eth.getBalance(multisigWallet.address);
+
+      // buy tokens
+      await crowdsaleK.buyTokens(INVESTOR, {value: amountEth, from: INVESTOR});
+      const vaultAddr = await crowdsaleK.vault.call();
+      const tokensBalance = await token.balanceOf.call(INVESTOR);
+      const tokensAmount = new BigNumber(amountEth).mul(rate);
+      const vaultBalanceBefore = await web3.eth.getBalance(vaultAddr);
+      await increaseTime(endTime - startTime + 1);
+      await crowdsaleMain.finalize();
+
+      //  claim refund
+      const walletBalanceAfter = await web3.eth.getBalance(multisigWallet.address);
+      const vaultBalanceAfter = await web3.eth.getBalance(vaultAddr);
+      const balanceInvestor = await token.balanceOf.call(INVESTOR);
+      const totalSupply = await crowdsaleMain.totalSupply.call();
       assert.equal(vaultBalanceBefore.sub(vaultBalanceAfter).toNumber(), amountEth.toNumber(), 'ether still deposited into the wallet');
       assert.equal(walletBalanceAfter.sub(walletBalanceBefore).toNumber(), amountEth.toNumber(), 'balance still added for investor');
     });

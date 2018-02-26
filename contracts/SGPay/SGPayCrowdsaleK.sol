@@ -1,8 +1,8 @@
 pragma solidity ^0.4.11;
 
 import '../crowdsale/singlestage/TokenCappedCrowdsale.sol';
-import '../crowdsale/RefundableCrowdsale.sol';
-
+import '../crowdsale/RefundVault.sol';
+import '../ownership/Ownable.sol';
 
 /**
  * @title SimpleCrowdsale
@@ -22,13 +22,16 @@ import '../crowdsale/RefundableCrowdsale.sol';
  // _cap - 10000000e18
  // _goal - 1500e18
 
-contract SGPayCrowdsaleK is TokenCappedCrowdsale, RefundableCrowdsale {
+contract SGPayCrowdsaleK is TokenCappedCrowdsale, Ownable {
 
-  function SGPayCrowdsaleK(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, uint256 _cap)
+  RefundVault public vault;
+
+  function SGPayCrowdsaleK(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, uint256 _cap, address _vaultAddr)
     Crowdsale(_startTime, _endTime, _rate, _wallet, controller)
     TokenCappedCrowdsale(_cap)
   {
-    // require(_cap.div(rate) > _goal);
+    require(_vaultAddr != address(0));
+    vault = RefundVault(_vaultAddr);
   }
 
   function setMain(address _complimentaryICO) public onlyOwner {
@@ -37,5 +40,9 @@ contract SGPayCrowdsaleK is TokenCappedCrowdsale, RefundableCrowdsale {
 
   function changeRate(uint256 _newValue) public onlyOwner {
     rate = _newValue;
+  }
+
+  function forwardFunds() internal {
+    vault.deposit.value(msg.value)(msg.sender);
   }
 }
