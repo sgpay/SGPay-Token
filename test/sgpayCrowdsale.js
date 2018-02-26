@@ -549,6 +549,7 @@ contract('SGpayCrowdsale', (accounts) => {
 
     it('should deny refunds after end if goal reached using crowdsaleK', async function () {
       await crowdsaleK.diluteCaps();
+      await crowdsaleMain.diluteCaps();
       const INVESTOR = accounts[4];
       const amountEth = new BigNumber(goal/1e18).mul(MOCK_ONE_ETH);
 
@@ -655,6 +656,7 @@ contract('SGpayCrowdsale', (accounts) => {
 
     it('should forward funds to wallet after end if goal was reached using crowdsaleK', async function () {
       await crowdsaleK.diluteCaps();
+      await crowdsaleMain.diluteCaps();
       const INVESTOR = accounts[4];
       const amountEth = new BigNumber(goal/1e18).mul(MOCK_ONE_ETH);
       const walletBalanceBefore = await web3.eth.getBalance(multisigWallet.address);

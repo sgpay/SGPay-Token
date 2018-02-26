@@ -1,7 +1,6 @@
 pragma solidity ^0.4.11;
 
-import "../../contracts/crowdsale/singlestage/TokenCappedCrowdsale.sol";
-import "../../contracts/crowdsale/RefundableCrowdsale.sol";
+import "../../contracts/crowdsale/singlestage/TokenCappedCrowdsalePre.sol";
 
 
 /**
@@ -15,13 +14,12 @@ import "../../contracts/crowdsale/RefundableCrowdsale.sol";
  * After adding multiple features it's good practice to run integration tests
  * to ensure that subcontracts works together as intended.
  */
-contract MockSimpleCrowdsale is Crowdsale, TokenCappedCrowdsale, RefundableCrowdsale {
+contract MockSimpleCrowdsale is TokenCappedCrowdsalePre {
 
 
-  function MockSimpleCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, uint256 _cap, uint256 _goal)
-  Crowdsale(_startTime, _endTime, _rate, _wallet, controller)
-  TokenCappedCrowdsale(_cap)
-  RefundableCrowdsale(_goal)
+  function MockSimpleCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, uint256 _cap)
+  CrowdsalePre(_startTime, _endTime, _rate, _wallet, controller)
+  TokenCappedCrowdsalePre(_cap)
   {
 
   }
@@ -29,7 +27,5 @@ contract MockSimpleCrowdsale is Crowdsale, TokenCappedCrowdsale, RefundableCrowd
   function diluteCaps() public {
     // diluting all caps by 10^6 for testing
     tokenCap = tokenCap.div(1e6);
-    goal = goal.div(1e6);
-
   }
 }

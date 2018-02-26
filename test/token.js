@@ -314,7 +314,6 @@ contract('Token', (accounts) => {
     let rates;
     let capTimes;
     let caps;
-    let goal;
     let simpleCrowdsale;
 
     beforeEach(async () => {
@@ -323,10 +322,9 @@ contract('Token', (accounts) => {
       rates = 500
       ends = startTime + 86400*5;
       caps = 900000e18;
-      goal = 180000e18;
 
       multisigWallet = await MultisigWallet.new(FOUNDERS, 3, 10*MOCK_ONE_ETH);
-      simpleCrowdsale = await SimpleCrowdsale.new(startTime, ends, rates, multisigWallet.address, controller.address, caps, goal);
+      simpleCrowdsale = await SimpleCrowdsale.new(startTime, ends, rates, multisigWallet.address, controller.address, caps);
       await controller.addAdmin(simpleCrowdsale.address);
     });
 
