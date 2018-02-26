@@ -12,4 +12,7 @@ contract FinalizableCrowdsaleImpl is FinalizableCrowdsale {
   {
   }
 
+  function setComplimentary(address _complimentaryICO) public {
+    complimentaryICO = _complimentaryICO;
+  }
 }

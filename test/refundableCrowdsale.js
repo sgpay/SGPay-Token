@@ -16,6 +16,7 @@ const RefundableCrowdsale = artifacts.require('./helpers/RefundableCrowdsaleImpl
 const Token = artifacts.require('./token/Token.sol');
 const DataCentre = artifacts.require('./token/DataCentre.sol');
 const MultisigWallet = artifacts.require('./multisig/solidity/MultiSigWalletWithDailyLimit.sol');
+const TestCaseHelper = artifacts.require('./mocks/TestCaseHelper.sol');
 
 contract('RefundableCrowdsale', function ([_, owner, investor]) {
 
@@ -38,7 +39,9 @@ contract('RefundableCrowdsale', function ([_, owner, investor]) {
     this.token = await Token.new();
     this.dataCentre = await DataCentre.new();
     this.controller = await Controller.new(this.token.address, this.dataCentre.address);
+    this.testCaseHelper = await TestCaseHelper.new();
     this.crowdsale = await RefundableCrowdsale.new(this.startTime, this.endTime, this.rate, this.multisigWallet.address, this.controller.address, goal, {from: owner})
+    await this.crowdsale.setComplimentary(this.testCaseHelper.address);
     await this.controller.addAdmin(this.crowdsale.address);
     await this.token.transferOwnership(this.controller.address);
     await this.dataCentre.transferOwnership(this.controller.address);

@@ -9,7 +9,11 @@ import './Crowdsale.sol';
 contract TokenCappedCrowdsale is Crowdsale {
 
   uint256 public tokenCap;
-  uint256 public totalSupply;
+  uint256 public totalSupplyIndividual;
+
+  function totalSupply() public constant returns (uint256) {
+    return totalSupplyIndividual.add(IComplimentary(complimentaryICO).totalSupplyIndividual());
+  }
 
   function TokenCappedCrowdsale(uint256 _tokenCap) public {
       require(_tokenCap > 0);
@@ -19,12 +23,12 @@ contract TokenCappedCrowdsale is Crowdsale {
   // low level token purchase function
   function buyTokens(address beneficiary) public payable {
     uint256 tokens = _buyTokens(beneficiary, rate);
-    if(!setSupply(totalSupply.add(tokens))) revert();
+    if(!setSupply(totalSupplyIndividual.add(tokens))) revert();
   }
 
   function setSupply(uint256 newSupply) internal constant returns (bool) {
-    totalSupply = newSupply;
-    return tokenCap >= totalSupply;
+    totalSupplyIndividual = newSupply;
+    return tokenCap >= totalSupply();
   }
 
 }

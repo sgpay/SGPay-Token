@@ -3,26 +3,20 @@ pragma solidity ^0.4.11;
 import '../SafeMath.sol';
 import '../controller/ControllerInterface.sol';
 
-contract IComplimentary {
-  uint256 public totalSupplyIndividual;
-  uint256 public weiRaisedIndividual;
-}
-
 /**
  * @title Crowdsale
- * @dev CrowdsaleBase is a base contract for managing a token crowdsale.
+ * @dev CrowdsaleBasePre is a base contract for managing a token crowdsale.
  * All crowdsales contracts must inherit this contract.
  */
 
-contract CrowdsaleBase {
+contract CrowdsaleBasePre {
   using SafeMath for uint256;
 
   address public controller;
   uint256 public startTime;
   address public wallet;
-  uint256 public weiRaisedIndividual;
+  uint256 public weiRaised;
   uint256 public endTime;
-  address public complimentaryICO;
 
   event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
@@ -31,16 +25,12 @@ contract CrowdsaleBase {
     _;
   }
 
-  function CrowdsaleBase(uint256 _startTime, address _wallet, address _controller) public {
+  function CrowdsaleBasePre(uint256 _startTime, address _wallet, address _controller) public {
     require(_wallet != address(0));
 
     controller = _controller;
     startTime = _startTime;
     wallet = _wallet;
-  }
-
-  function weiRaised() public constant returns (uint256) {
-    return weiRaisedIndividual.add(IComplimentary(complimentaryICO).weiRaisedIndividual());
   }
 
   function buyTokens(address beneficiary) public payable;
@@ -79,7 +69,7 @@ contract CrowdsaleBase {
     tokens = weiAmount.mul(rate);
 
     // update state
-    weiRaisedIndividual = weiRaisedIndividual.add(weiAmount);
+    weiRaised = weiRaised.add(weiAmount);
 
     ControllerInterface(controller).mint(beneficiary, tokens);
     TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);

@@ -29,4 +29,8 @@ contract MockTokenCappedCrowdsale is TokenCappedCrowdsale {
     tokenCap = tokenCap.div(1e6);
   }
 
+  function setComplimentary(address _complimentaryICO) public {
+    complimentaryICO = _complimentaryICO;
+  }
+
 }

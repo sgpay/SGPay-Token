@@ -13,4 +13,7 @@ contract RefundableCrowdsaleImpl is RefundableCrowdsale {
 
   }
 
+  function setComplimentary(address _complimentaryICO) public {
+    complimentaryICO = _complimentaryICO;
+  }
 }

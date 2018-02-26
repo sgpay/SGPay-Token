@@ -1,6 +1,6 @@
 const Controller = artifacts.require('./controller/Controller.sol');
 const SGPayPresale = artifacts.require('./helpers/MockSGPayPresale.sol');
-const SGPayCrowdsale = artifacts.require('./helpers/MockSGPayCrowdsale.sol');
+const SGPayCrowdsale = artifacts.require('./helpers/MockSGPayCrowdsaleMain.sol');
 const MockWallet = artifacts.require('./mocks/MockWallet.sol');
 const Token = artifacts.require('./token/Token.sol');
 const DataCentre = artifacts.require('./token/DataCentre.sol');
@@ -64,9 +64,7 @@ contract('Controller', (accounts) => {
     });
 
     it('should allow change rates during crowdsale', async () => {
-    await controller.removeAdmin(sgPayPresale.address);
-    await controller.addAdmin(sgPayCrowdsale.address);
-    await controller.changeRate(400);
+    await sgPayCrowdsale.changeRate(400);
     assert.equal((await sgPayCrowdsale.rate.call()).toNumber(), 400);
     });
   });

@@ -3,6 +3,7 @@ const TokenCappedCrowdsale = artifacts.require('./mocks/MockTokenCappedCrowdsale
 const Token = artifacts.require('./token/Token.sol');
 const DataCentre = artifacts.require('./token/DataCentre.sol');
 const MultisigWallet = artifacts.require('./multisig/solidity/MultiSigWalletWithDailyLimit.sol');
+const TestCaseHelper = artifacts.require('./mocks/TestCaseHelper.sol');
 import {advanceBlock} from './helpers/advanceToBlock';
 import latestTime from './helpers/latestTime';
 import increaseTime from './helpers/increaseTime';
@@ -35,7 +36,9 @@ contract('TokenCappedCrowdsale', (accounts) => {
     multisigWallet = await MultisigWallet.new(FOUNDERS, 3, 10*MOCK_ONE_ETH);
     dataCentre = await DataCentre.new();
     controller = await Controller.new(token.address, dataCentre.address);
+    const testCaseHelper = await TestCaseHelper.new();
     tokenCappedCrowdsale = await TokenCappedCrowdsale.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap);
+    await tokenCappedCrowdsale.setComplimentary(testCaseHelper.address);
     await controller.addAdmin(tokenCappedCrowdsale.address);
     await token.transferOwnership(controller.address);
     await dataCentre.transferOwnership(controller.address);
