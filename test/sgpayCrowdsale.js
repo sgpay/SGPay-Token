@@ -1,6 +1,6 @@
 const Controller = artifacts.require('./controller/Controller.sol');
 const Presale = artifacts.require('./mocks/MockSGPayPresale.sol');
-const Crowdsale = artifacts.require('./mocks/MockSGPayCrowdsale.sol');
+const CrowdsaleMain = artifacts.require('./mocks/MockSGPayCrowdsaleMain.sol');
 const MockWallet = artifacts.require('./mocks/MockWallet.sol');
 const Token = artifacts.require('./crowdsale/SGPay.sol');
 const DataCentre = artifacts.require('./token/DataCentre.sol');
@@ -192,7 +192,7 @@ contract('SGpayCrowdsale', (accounts) => {
       rate = 1700;
       goal = 1500e18;
       tokenCap = 10000000e18;
-      crowdsale = await Crowdsale.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
+      crowdsale = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
       await controller.removeAdmin(presale.address);
       await controller.addAdmin(crowdsale.address);
     });
@@ -228,7 +228,7 @@ contract('SGpayCrowdsale', (accounts) => {
       let crowdsaleNew;
       endTime = startTime - 1;
       try {
-        crowdsaleNew = await Crowdsale.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
+        crowdsaleNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -240,7 +240,7 @@ contract('SGpayCrowdsale', (accounts) => {
     it('should not allow to start crowdsale due to ZERO rate',  async () => {
       let crowdsaleNew;
       try {
-        crowdsaleNew = await Crowdsale.new(startTime, endTime, 0, multisigWallet.address, controller.address, tokenCap, goal);
+        crowdsaleNew = await CrowdsaleMain.new(startTime, endTime, 0, multisigWallet.address, controller.address, tokenCap, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -252,7 +252,7 @@ contract('SGpayCrowdsale', (accounts) => {
     it('should not allow to start crowdsale if cap is zero',  async () => {
       let crowdsaleNew;
       try {
-        crowdsaleNew = await Crowdsale.new(startTime, endTime, rate, multisigWallet.address, controller.address, 0, goal);
+        crowdsaleNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, 0, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -264,7 +264,7 @@ contract('SGpayCrowdsale', (accounts) => {
     it('should not allow to start crowdsale if goal is zero',  async () => {
       let crowdsaleNew;
       try {
-        crowdsaleNew = await Crowdsale.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, 0);
+        crowdsaleNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, 0);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
