@@ -6,6 +6,7 @@ const MockWallet = artifacts.require('./mocks/MockWallet.sol');
 const Token = artifacts.require('./crowdsaleMain/SGPay.sol');
 const DataCentre = artifacts.require('./token/DataCentre.sol');
 const MultisigWallet = artifacts.require('./multisig/solidity/MultiSigWalletWithDailyLimit.sol');
+const TestCaseHelper = artifacts.require('./mocks/TestCaseHelper.sol');
 import {advanceBlock} from './helpers/advanceToBlock';
 import latestTime from './helpers/latestTime';
 import increaseTime from './helpers/increaseTime';
@@ -180,6 +181,7 @@ contract('SGpayCrowdsale', (accounts) => {
     });
   })
 
+
   describe('#crowdsale', () => {
     let goal;
     let crowdsaleMain;
@@ -187,6 +189,7 @@ contract('SGpayCrowdsale', (accounts) => {
     let endTime;
     let startTime;
     let vaultAddr;
+    let preSale;
 
     beforeEach(async () => {
       await advanceBlock();
@@ -195,9 +198,10 @@ contract('SGpayCrowdsale', (accounts) => {
       rate = 1700;
       goal = 1500e18;
       tokenCap = 10000000e18;
-      crowdsaleMain = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
+      preSale = await TestCaseHelper.new();
+      crowdsaleMain = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, preSale.address, tokenCap, goal);
       vaultAddr = await crowdsaleMain.vault.call();
-      crowdsaleK = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, vaultAddr);
+      crowdsaleK = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, preSale.address, tokenCap, vaultAddr);
       await crowdsaleMain.setKico(crowdsaleK.address);
       await crowdsaleK.setMain(crowdsaleMain.address);
       await controller.removeAdmin(presale.address);
@@ -232,6 +236,7 @@ contract('SGpayCrowdsale', (accounts) => {
     assert.equal(rate.toNumber(), rate, 'rate not set right');
     });
 
+
     it('should allow start crowdsaleK properly', async () => {
     // checking startTime
     const startTimeSet = await crowdsaleK.startTime.call();
@@ -262,7 +267,7 @@ contract('SGpayCrowdsale', (accounts) => {
       let crowdsaleMainNew;
       endTime = startTime - 1;
       try {
-        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, goal);
+        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, preSale.address, tokenCap, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -274,7 +279,7 @@ contract('SGpayCrowdsale', (accounts) => {
     it('should not allow to start crowdsaleMain due to ZERO rate',  async () => {
       let crowdsaleMainNew;
       try {
-        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, 0, multisigWallet.address, controller.address, tokenCap, goal);
+        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, 0, multisigWallet.address, controller.address, preSale.address, tokenCap, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -286,7 +291,7 @@ contract('SGpayCrowdsale', (accounts) => {
     it('should not allow to start crowdsaleMain if cap is zero',  async () => {
       let crowdsaleMainNew;
       try {
-        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, 0, goal);
+        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, preSale.address, 0, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -298,7 +303,19 @@ contract('SGpayCrowdsale', (accounts) => {
     it('should not allow to start crowdsaleMain if goal is zero',  async () => {
       let crowdsaleMainNew;
       try {
-        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, 0);
+        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, preSale.address, tokenCap, 0);
+        assert.fail('should have failed before');
+      } catch(error) {
+        assertJump(error);
+      }
+
+      assert.equal(crowdsaleMainNew, undefined, 'crowdsaleMain still initialized');
+    });
+
+    it('should not allow to start crowdsaleMain if presale address is zero',  async () => {
+      let crowdsaleMainNew;
+      try {
+        crowdsaleMainNew = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, 0x00, tokenCap, goal);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -311,7 +328,7 @@ contract('SGpayCrowdsale', (accounts) => {
       let crowdsaleKNew;
       endTime = startTime - 1;
       try {
-        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, vaultAddr);
+        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, preSale.address, tokenCap, vaultAddr);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -323,7 +340,7 @@ contract('SGpayCrowdsale', (accounts) => {
     it('should not allow to start crowdsaleK due to ZERO rate',  async () => {
       let crowdsaleKNew;
       try {
-        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, 0, multisigWallet.address, controller.address, tokenCap, vaultAddr);
+        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, 0, multisigWallet.address, controller.address, preSale.address, tokenCap, vaultAddr);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -335,7 +352,7 @@ contract('SGpayCrowdsale', (accounts) => {
     it('should not allow to start crowdsaleK if cap is zero',  async () => {
       let crowdsaleKNew;
       try {
-        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, 0, vaultAddr);
+        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, preSale.address, 0, vaultAddr);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -347,7 +364,19 @@ contract('SGpayCrowdsale', (accounts) => {
     it('should not allow to start crowdsaleK if vaultAddr is zero',  async () => {
       let crowdsaleKNew;
       try {
-        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap, 0x00);
+        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, preSale.address, tokenCap, 0x00);
+        assert.fail('should have failed before');
+      } catch(error) {
+        assertJump(error);
+      }
+
+      assert.equal(crowdsaleKNew, undefined, 'crowdsaleK still initialized');
+    });
+
+    it('should not allow to start crowdsaleK if endTime smaller than startTime',  async () => {
+      let crowdsaleKNew;
+      try {
+        crowdsaleKNew = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, 0x00, tokenCap, vaultAddr);
         assert.fail('should have failed before');
       } catch(error) {
         assertJump(error);
@@ -679,4 +708,76 @@ contract('SGpayCrowdsale', (accounts) => {
       assert.equal(walletBalanceAfter.sub(walletBalanceBefore).toNumber(), amountEth.toNumber(), 'balance still added for investor');
     });
   })
-})
+
+  describe('#currentScenario', () => {
+
+    it('should allow start crowdsaleMain properly', async () => {
+    await advanceBlock();
+    let startTime = latestTime();
+    let endTime = startTime + 86400*14;
+    let rate = 2125;
+    let tokenCap = 2000000e18;
+    let token = await Token.new();
+    let multisigWallet = await MultisigWallet.new(FOUNDERS, 3, 10*MOCK_ONE_ETH);
+    let dataCentre = await DataCentre.new();
+    let controller = await Controller.new(token.address, dataCentre.address);
+    let presale = await Presale.new(startTime, endTime, rate, multisigWallet.address, controller.address, tokenCap);
+    await controller.addAdmin(presale.address);
+    await token.transferOwnership(controller.address);
+    await dataCentre.transferOwnership(controller.address);
+    await controller.unpause();
+    await controller.mint(accounts[0], 3800000e18);
+    await presale.diluteCap();
+
+    await presale.buyTokens(accounts[1], {value: 550*MOCK_ONE_ETH});
+
+    assert.equal((await token.balanceOf(accounts[1])).toNumber(), rate*550*MOCK_ONE_ETH);
+    assert.equal((await token.totalSupply()).toNumber(), rate*550*MOCK_ONE_ETH + 3800000e18);
+    assert.equal((await presale.totalSupply()).toNumber(), rate*550*MOCK_ONE_ETH);
+    assert.equal((await presale.weiRaised()).toNumber(), 550*MOCK_ONE_ETH);
+    assert.equal((await web3.eth.getBalance(multisigWallet.address)).toNumber(), 550*MOCK_ONE_ETH);
+
+    await increaseTime(endTime - startTime + 1);
+
+    await advanceBlock();
+    startTime = latestTime();
+    endTime = startTime + 86400*31;
+    rate = 1700;
+    const goal = 750e18;
+    tokenCap = 10000000e18;
+    const crowdsaleMain = await CrowdsaleMain.new(startTime, endTime, rate, multisigWallet.address, controller.address, presale.address, tokenCap, goal);
+    const vaultAddr = await crowdsaleMain.vault.call();
+    const crowdsaleK = await CrowdsaleK.new(startTime, endTime, rate, multisigWallet.address, controller.address, presale.address, tokenCap, vaultAddr);
+
+    await crowdsaleMain.setKico(crowdsaleK.address);
+    await crowdsaleK.setMain(crowdsaleMain.address);
+    await controller.removeAdmin(presale.address);
+    await controller.addAdmin(crowdsaleMain.address);
+    await controller.addAdmin(crowdsaleK.address);
+    await crowdsaleMain.diluteCaps();
+    await crowdsaleK.diluteCaps();
+
+    await crowdsaleK.buyTokens(accounts[1], {value: 100*MOCK_ONE_ETH});
+    await crowdsaleMain.buyTokens(accounts[1], {value: 100*MOCK_ONE_ETH});
+
+    assert.equal((await token.balanceOf(accounts[1])).toNumber(), 2125*550*MOCK_ONE_ETH + rate*200*MOCK_ONE_ETH);
+    assert.equal((await token.totalSupply()).toNumber(), 2125*550*MOCK_ONE_ETH + rate*200*MOCK_ONE_ETH + 3800000e18);
+    assert.equal((await crowdsaleMain.totalSupplyIndividual()).toNumber(), rate*100*MOCK_ONE_ETH);
+    assert.equal((await crowdsaleK.totalSupplyIndividual()).toNumber(), rate*100*MOCK_ONE_ETH);
+    assert.equal((await crowdsaleMain.totalSupply()).toNumber(), rate*200*MOCK_ONE_ETH);
+    assert.equal((await crowdsaleK.totalSupply()).toNumber(), rate*200*MOCK_ONE_ETH);
+
+    assert.equal((await crowdsaleMain.weiRaisedIndividual()).toNumber(), 100*MOCK_ONE_ETH);
+    assert.equal((await crowdsaleK.weiRaisedIndividual()).toNumber(), 100*MOCK_ONE_ETH);
+    assert.equal((await crowdsaleMain.weiRaised()).toNumber(), 750*MOCK_ONE_ETH);
+    assert.equal((await crowdsaleK.weiRaised()).toNumber(), 750*MOCK_ONE_ETH);
+
+    assert.equal((await web3.eth.getBalance(vaultAddr)).toNumber(), 200*MOCK_ONE_ETH);
+
+    await increaseTime(endTime - startTime + 1);
+    await crowdsaleMain.finalize();
+
+    assert.equal((await web3.eth.getBalance(multisigWallet.address)).toNumber(), 750*MOCK_ONE_ETH);
+    });
+  });
+});
