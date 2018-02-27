@@ -40,7 +40,7 @@ contract('RefundableCrowdsale', function ([_, owner, investor]) {
     this.dataCentre = await DataCentre.new();
     this.controller = await Controller.new(this.token.address, this.dataCentre.address);
     this.testCaseHelper = await TestCaseHelper.new();
-    this.crowdsale = await RefundableCrowdsale.new(this.startTime, this.endTime, this.rate, this.multisigWallet.address, this.controller.address, goal, {from: owner})
+    this.crowdsale = await RefundableCrowdsale.new(this.startTime, this.endTime, this.rate, this.multisigWallet.address, this.controller.address, this.testCaseHelper.address, goal, {from: owner})
     await this.crowdsale.setComplimentary(this.testCaseHelper.address);
     await this.controller.addAdmin(this.crowdsale.address);
     await this.token.transferOwnership(this.controller.address);

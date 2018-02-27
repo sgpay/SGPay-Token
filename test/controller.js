@@ -55,7 +55,7 @@ contract('Controller', (accounts) => {
       rates = 1700;
       goal = 1500e18;
       caps = 10000000e18;
-      sgPayCrowdsale = await SGPayCrowdsale.new(startTime, ends, rates, multisigWallet.address, controller.address, caps, goal);
+      sgPayCrowdsale = await SGPayCrowdsale.new(startTime, ends, rates, multisigWallet.address, controller.address, sgPayPresale.address, caps, goal);
     });
 
     it('should allow change rates during preSale', async () => {
