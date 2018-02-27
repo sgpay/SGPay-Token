@@ -26,12 +26,15 @@ contract SGPayCrowdsaleK is TokenCappedCrowdsale, Ownable {
 
   RefundVault public vault;
 
-  function SGPayCrowdsaleK(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, uint256 _cap, address _vaultAddr)
+  function SGPayCrowdsaleK(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, address _presale, uint256 _cap, address _vaultAddr)
     Crowdsale(_startTime, _endTime, _rate, _wallet, controller)
     TokenCappedCrowdsale(_cap)
   {
     require(_vaultAddr != address(0));
+    require(_presale != address(0));
+
     vault = RefundVault(_vaultAddr);
+    presaleAddr = _presale;
   }
 
   function setMain(address _complimentaryICO) public onlyOwner {

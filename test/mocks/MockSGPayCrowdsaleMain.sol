@@ -16,8 +16,8 @@ import "../../contracts/SGPay/SGPayCrowdsaleMain.sol";
  */
 contract MockSGPayCrowdsaleMain is SGPayCrowdsaleMain {
 
-  function MockSGPayCrowdsaleMain(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, uint256 _cap, uint256 _goal)
-  SGPayCrowdsaleMain(_startTime, _endTime, _rate, _wallet, controller, _cap, _goal)
+  function MockSGPayCrowdsaleMain(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, address _presale, uint256 _cap, uint256 _goal)
+  SGPayCrowdsaleMain(_startTime, _endTime, _rate, _wallet, controller, _presale, _cap, _goal)
   {
 
   }

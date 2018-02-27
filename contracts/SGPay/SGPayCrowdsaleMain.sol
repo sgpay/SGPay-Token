@@ -24,11 +24,13 @@ import '../crowdsale/RefundableCrowdsale.sol';
 
 contract SGPayCrowdsaleMain is TokenCappedCrowdsale, RefundableCrowdsale {
 
-  function SGPayCrowdsaleMain(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, uint256 _cap, uint256 _goal)
+  function SGPayCrowdsaleMain(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address controller, address _presale, uint256 _cap, uint256 _goal)
     Crowdsale(_startTime, _endTime, _rate, _wallet, controller)
     TokenCappedCrowdsale(_cap)
     RefundableCrowdsale(_goal)
   {
+    require(_presale != address(0));
+    presaleAddr = _presale;
     // require(_cap.div(rate) > _goal);
   }
 

@@ -15,4 +15,5 @@ pragma solidity ^0.4.11;
 contract TestCaseHelper {
   uint256 public constant totalSupplyIndividual = 0;
   uint256 public constant weiRaisedIndividual = 0;
+  uint256 public constant weiRaised = 0;
 }

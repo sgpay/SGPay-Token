@@ -6,6 +6,7 @@ import '../controller/ControllerInterface.sol';
 contract IComplimentary {
   uint256 public totalSupplyIndividual;
   uint256 public weiRaisedIndividual;
+  uint256 public weiRaised;
 }
 
 /**
@@ -21,6 +22,7 @@ contract CrowdsaleBase {
   uint256 public startTime;
   address public wallet;
   uint256 public weiRaisedIndividual;
+  address public presaleAddr;
   uint256 public endTime;
   address public complimentaryICO;
 
@@ -40,7 +42,7 @@ contract CrowdsaleBase {
   }
 
   function weiRaised() public constant returns (uint256) {
-    return weiRaisedIndividual.add(IComplimentary(complimentaryICO).weiRaisedIndividual());
+    return weiRaisedIndividual.add(IComplimentary(complimentaryICO).weiRaisedIndividual()).add(IComplimentary(presaleAddr).weiRaised());
   }
 
   function buyTokens(address beneficiary) public payable;
