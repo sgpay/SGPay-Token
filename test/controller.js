@@ -1,6 +1,7 @@
 const Controller = artifacts.require('./controller/Controller.sol');
 const SGPayPresale = artifacts.require('./helpers/MockSGPayPresale.sol');
 const SGPayCrowdsale = artifacts.require('./helpers/MockSGPayCrowdsaleMain.sol');
+const SGPayCrowdsaleK = artifacts.require('./helpers/MockSGPayCrowdsaleK.sol');
 const MockWallet = artifacts.require('./mocks/MockWallet.sol');
 const Token = artifacts.require('./token/Token.sol');
 const DataCentre = artifacts.require('./token/DataCentre.sol');
@@ -40,6 +41,7 @@ contract('Controller', (accounts) => {
     let goal;
     let sgPayPresale;
     let sgPayCrowdsale;
+    let sgPayCrowdsaleK;
 
     beforeEach(async () => {
       await advanceBlock();
@@ -56,6 +58,7 @@ contract('Controller', (accounts) => {
       goal = 1500e18;
       caps = 10000000e18;
       sgPayCrowdsale = await SGPayCrowdsale.new(startTime, ends, rates, multisigWallet.address, controller.address, sgPayPresale.address, caps, goal);
+      sgPayCrowdsaleK = await SGPayCrowdsale.new(startTime, ends, rates, multisigWallet.address, controller.address, sgPayPresale.address, caps, await sgPayCrowdsale.vault.call());
     });
 
     it('should allow change rates during preSale', async () => {
@@ -65,7 +68,9 @@ contract('Controller', (accounts) => {
 
     it('should allow change rates during crowdsale', async () => {
     await sgPayCrowdsale.changeRate(400);
+    await sgPayCrowdsaleK.changeRate(400);
     assert.equal((await sgPayCrowdsale.rate.call()).toNumber(), 400);
+    assert.equal((await sgPayCrowdsaleK.rate.call()).toNumber(), 400);
     });
   });
 
