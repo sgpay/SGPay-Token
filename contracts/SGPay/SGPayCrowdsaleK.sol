@@ -41,6 +41,11 @@ contract SGPayCrowdsaleK is TokenCappedCrowdsale, Ownable {
     complimentaryICO = _complimentaryICO;
   }
 
+  function extendEndTime(uint256 _endTime) public onlyOwner {
+    require(_endTime > endTime);
+    endTime = _endTime;
+  }
+
   function changeRate(uint256 _newValue) public onlyOwner {
     rate = _newValue;
   }

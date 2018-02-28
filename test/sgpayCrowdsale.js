@@ -774,7 +774,13 @@ contract('SGpayCrowdsale', (accounts) => {
 
     assert.equal((await web3.eth.getBalance(vaultAddr)).toNumber(), 200*MOCK_ONE_ETH);
 
-    await increaseTime(endTime - startTime + 1);
+    await crowdsaleMain.extendEndTime(endTime + 60);
+    await crowdsaleK.extendEndTime(endTime + 60);
+
+    assert.equal((await crowdsaleMain.endTime.call()).toNumber(), endTime + 60);
+    assert.equal((await crowdsaleK.endTime.call()).toNumber(), endTime + 60);
+
+    await increaseTime(endTime - startTime + 61);
     await crowdsaleMain.finalize();
 
     assert.equal((await web3.eth.getBalance(multisigWallet.address)).toNumber(), 750*MOCK_ONE_ETH);
